@@ -1,0 +1,6 @@
+torch
+torchvision
+torchaudio
+splitfolders
+tqdm
+scikit-learn
