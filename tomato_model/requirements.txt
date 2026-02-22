@@ -4,7 +4,7 @@ torchvision
 torchaudio
 
 # Data handling
-splitfolders
+split-folders
 tqdm
 scikit-learn
 Pillow

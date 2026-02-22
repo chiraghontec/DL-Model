@@ -1,0 +1,81 @@
+{
+    "model": {
+        "architecture": "resnet18",
+        "num_classes": 3,
+        "class_names": ["early_blight", "healthy", "late_blight"],
+        "input_size": [224, 224],
+        "pretrained": true,
+        "checkpoint_dir": "checkpoints",
+        "onnx_fp32_path": "checkpoints/resnet18_tomato_fp32.onnx",
+        "onnx_int8_path": "checkpoints/resnet18_tomato_int8.onnx",
+        "onnx_fp16_path": "checkpoints/resnet18_tomato_fp16.onnx"
+    },
+    "training": {
+        "epochs": 30,
+        "batch_size": 64,
+        "learning_rate": 0.001,
+        "optimizer": "adam",
+        "scheduler_patience": 2,
+        "scheduler_factor": 0.5,
+        "early_stopping_patience": 5,
+        "use_class_weights": true,
+        "seed": 42,
+        "num_workers": 4
+    },
+    "augmentation": {
+        "resize": 256,
+        "crop_size": 224,
+        "horizontal_flip": true,
+        "color_jitter": {
+            "brightness": 0.3,
+            "contrast": 0.3,
+            "saturation": 0.2,
+            "hue": 0.1
+        },
+        "rotation_degrees": 15,
+        "gaussian_blur": {
+            "kernel_size": 3,
+            "sigma": [0.1, 2.0]
+        },
+        "random_erasing_prob": 0.2,
+        "random_affine_translate": [0.1, 0.1]
+    },
+    "inference": {
+        "confidence_threshold": 0.70,
+        "use_onnx": true,
+        "gradcam_layer": "layer4"
+    },
+    "camera": {
+        "device_id": 0,
+        "resolution": [640, 480],
+        "fps": 30,
+        "auto_exposure": true
+    },
+    "zone_mapping": {
+        "num_zones": 3,
+        "boundaries_y_fraction": [0.333, 0.667],
+        "zone_names": ["TOP", "MID", "BOTTOM"],
+        "relay_gpio_pins": [17, 27, 22],
+        "pump_gpio_pin": 23
+    },
+    "vra": {
+        "alpha": 0.025,
+        "beta": 30.0,
+        "min_duration_ms": 50,
+        "max_duration_ms": 500,
+        "cooldown_ms": 200
+    },
+    "navigation": {
+        "serial_port": "/dev/ttyUSB0",
+        "baud_rate": 115200,
+        "default_speed_pwm": 150,
+        "obstacle_threshold_cm": 15,
+        "heartbeat_interval_ms": 500
+    },
+    "logging": {
+        "csv_path": "logs/spray_log.csv",
+        "save_frames": true,
+        "frame_save_interval": 10,
+        "max_log_size_mb": 50
+    }
+}
