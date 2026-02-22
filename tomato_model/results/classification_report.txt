@@ -1,0 +1,20 @@
+Model: resnet18
+Checkpoint: ./checkpoints/best_epoch_25_acc_0.9236.pth
+Test samples: 2702
+Classes: ['early_blight', 'healthy', 'late_blight']
+
+Accuracy: 0.9264 (92.64%)
+Precision (weighted): 0.9259
+Recall (weighted): 0.9264
+F1-Score (weighted): 0.9259
+
+              precision    recall  f1-score   support
+
+early_blight     0.8579    0.8550    0.8564       600
+     healthy     0.9646    0.9990    0.9815       955
+ late_blight     0.9291    0.9032    0.9160      1147
+
+    accuracy                         0.9264      2702
+   macro avg     0.9172    0.9191    0.9180      2702
+weighted avg     0.9259    0.9264    0.9259      2702
+
