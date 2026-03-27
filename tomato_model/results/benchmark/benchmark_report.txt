@@ -1,0 +1,76 @@
+=================================================================
+  BENCHMARK REPORT — Tomato Blight Classifier
+  Generated: 2026-02-23 04:56:21
+=================================================================
+
+── System Information ──
+  Platform:     macOS-26.3-arm64-arm-64bit-Mach-O
+  Device:       Chirags-MacBook-Air.local
+  CPU:          arm
+  CPU Cores:    8 physical / 8 logical
+  RAM:          8.0 GB total, 2.37 GB available
+  Raspberry Pi: No
+  ONNX Runtime: 1.24.2
+  Python:       3.14.2
+
+── Inference Latency ──
+
+  FP32 (42.63 MB):
+    Mean:       17.31 ms
+    Median:     17.22 ms
+    Std:        0.86 ms
+    Min:        16.00 ms
+    Max:        22.32 ms
+    P90:        17.78 ms
+    P95:        18.30 ms
+    P99:        21.61 ms
+    Throughput: 57.8 FPS
+    Memory:     156.55 MB RSS
+
+  INT8 (10.71 MB):
+    Mean:       9.78 ms
+    Median:     9.53 ms
+    Std:        1.20 ms
+    Min:        8.98 ms
+    Max:        24.02 ms
+    P90:        10.21 ms
+    P95:        11.05 ms
+    P99:        13.08 ms
+    Throughput: 102.3 FPS
+    Memory:     161.83 MB RSS
+
+── FP32 vs INT8 Comparison ──
+  Speedup:     1.77×
+  Compression: 4.0× (42.63 → 10.71 MB)
+
+── Accuracy ──
+
+  FP32:
+    Overall:    0.9286 (2509/2702)
+    Confidence: 0.9183 (mean)
+    Per-class:
+      early_blight   : 0.8650 (519/600)
+      healthy        : 0.9990 (954/955)
+      late_blight    : 0.9032 (1036/1147)
+
+  INT8:
+    Overall:    0.9293 (2511/2702)
+    Confidence: 0.9188 (mean)
+    Per-class:
+      early_blight   : 0.8617 (517/600)
+      healthy        : 0.9990 (954/955)
+      late_blight    : 0.9067 (1040/1147)
+
+  Accuracy Drop (INT8 vs FP32): -0.0007 (-0.07%)
+  Tolerance Check (≤2%): ✓ PASS
+
+── Deployment Readiness (Raspberry Pi 4) ──
+  ✓ Model size ≤ 15 MB
+  ✓ Mean latency ≤ 400 ms
+  ✓ Throughput ≥ 2 FPS
+  ✓ P95 latency ≤ 500 ms
+  ✓ Accuracy ≥ 90%
+
+  ✓ ALL CHECKS PASSED — Ready for deployment
+
+=================================================================

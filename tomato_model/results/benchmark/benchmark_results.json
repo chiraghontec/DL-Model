@@ -1,0 +1,123 @@
+{
+  "timestamp": "2026-02-23T04:56:21.208278",
+  "system_info": {
+    "platform": "macOS-26.3-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "processor": "arm",
+    "python_version": "3.14.2",
+    "onnxruntime_version": "1.24.2",
+    "is_raspberry_pi": false,
+    "device_model": "Chirags-MacBook-Air.local",
+    "cpu_count_physical": 8,
+    "cpu_count_logical": 8,
+    "ram_total_gb": 8.0,
+    "ram_available_gb": 2.37,
+    "cpu_freq_mhz": 3204
+  },
+  "latency_benchmarks": [
+    {
+      "label": "FP32",
+      "model_path": "checkpoints/resnet18_tomato_fp32.onnx",
+      "model_size_mb": 42.63,
+      "n_runs": 200,
+      "latency_ms": {
+        "mean": 17.308,
+        "median": 17.224,
+        "std": 0.856,
+        "min": 16.001,
+        "max": 22.318,
+        "p50": 17.224,
+        "p90": 17.784,
+        "p95": 18.298,
+        "p99": 21.607
+      },
+      "throughput_fps": 57.8,
+      "memory": {
+        "before": {
+          "rss_mb": 156.52,
+          "vms_mb": 425210.31
+        },
+        "after": {
+          "rss_mb": 156.55,
+          "vms_mb": 425210.31
+        }
+      }
+    },
+    {
+      "label": "INT8",
+      "model_path": "checkpoints/resnet18_tomato_int8.onnx",
+      "model_size_mb": 10.71,
+      "n_runs": 200,
+      "latency_ms": {
+        "mean": 9.775,
+        "median": 9.529,
+        "std": 1.198,
+        "min": 8.983,
+        "max": 24.019,
+        "p50": 9.529,
+        "p90": 10.206,
+        "p95": 11.054,
+        "p99": 13.078
+      },
+      "throughput_fps": 102.3,
+      "memory": {
+        "before": {
+          "rss_mb": 161.83,
+          "vms_mb": 425210.31
+        },
+        "after": {
+          "rss_mb": 161.83,
+          "vms_mb": 425210.31
+        }
+      }
+    }
+  ],
+  "accuracy_benchmarks": [
+    {
+      "label": "FP32",
+      "accuracy": 0.9286,
+      "correct": 2509,
+      "total": 2702,
+      "per_class_accuracy": {
+        "early_blight": 0.865,
+        "healthy": 0.999,
+        "late_blight": 0.9032
+      },
+      "per_class_correct": {
+        "early_blight": 519,
+        "healthy": 954,
+        "late_blight": 1036
+      },
+      "per_class_total": {
+        "early_blight": 600,
+        "healthy": 955,
+        "late_blight": 1147
+      },
+      "confidence_mean": 0.9183,
+      "confidence_median": 0.9864
+    },
+    {
+      "label": "INT8",
+      "accuracy": 0.9293,
+      "correct": 2511,
+      "total": 2702,
+      "per_class_accuracy": {
+        "early_blight": 0.8617,
+        "healthy": 0.999,
+        "late_blight": 0.9067
+      },
+      "per_class_correct": {
+        "early_blight": 517,
+        "healthy": 954,
+        "late_blight": 1040
+      },
+      "per_class_total": {
+        "early_blight": 600,
+        "healthy": 955,
+        "late_blight": 1147
+      },
+      "confidence_mean": 0.9188,
+      "confidence_median": 0.9868
+    }
+  ]
+}

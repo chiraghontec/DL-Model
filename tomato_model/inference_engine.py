@@ -53,11 +53,21 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 import onnxruntime as ort
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
 
-from gradcam import GradCAM, overlay_heatmap, draw_bbox_and_zone
+# PyTorch and GradCAM are optional — only needed for GradCAM localization.
+# On Raspberry Pi (ONNX-only deployment) these may not be installed.
+try:
+    import torch
+    import torch.nn as nn
+    from torchvision import models, transforms
+    from gradcam import GradCAM, overlay_heatmap, draw_bbox_and_zone
+    _TORCH_AVAILABLE = True
+except ImportError:
+    _TORCH_AVAILABLE = False
+    torch = None  # type: ignore
+    GradCAM = None  # type: ignore
+    overlay_heatmap = None  # type: ignore
+    draw_bbox_and_zone = None  # type: ignore
 
 
 class InferenceEngine:
@@ -99,14 +109,9 @@ class InferenceEngine:
         self.vra_min_ms = vra_cfg.get("min_spray_ms", 50)
         self.vra_max_ms = vra_cfg.get("max_spray_ms", 500)
 
-        # Zone config
-        zone_cfg = self.config.get("zone_mapping", {})
-        self.zones = zone_cfg.get("zones", [
-            {"name": "TOP", "gpio_pin": 17},
-            {"name": "MID", "gpio_pin": 27},
-            {"name": "BOTTOM", "gpio_pin": 22},
-        ])
-        self.zone_boundaries = [0.333, 0.667]
+        # Stepper / kinematic config
+        stepper_cfg = self.config.get("stepper", {})
+        self.camera_fov_height_mm: float = stepper_cfg.get("camera_fov_height_mm", 300.0)
 
         # Camera config
         cam_cfg = self.config.get("camera", {})
@@ -114,16 +119,23 @@ class InferenceEngine:
         self.frame_height = cam_cfg.get("resolution", [640, 480])[1]
 
         # Preprocessing transforms (same as training validation)
-        self.transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(256),
-            transforms.CenterCrop(self.input_size),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225],
-            ),
-        ])
+        # Pure PIL+numpy path — works with or without torchvision on Pi
+        self._imagenet_mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        self._imagenet_std  = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+
+        if _TORCH_AVAILABLE:
+            self.transform = transforms.Compose([
+                transforms.ToPILImage(),
+                transforms.Resize(256),
+                transforms.CenterCrop(self.input_size),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ])
+        else:
+            self.transform = None
 
         # Initialize models
         self.onnx_session = None
@@ -161,6 +173,11 @@ class InferenceEngine:
         (not ONNX). On resource-constrained devices, this is loaded on
         demand only when disease is detected.
         """
+        if not _TORCH_AVAILABLE:
+            raise RuntimeError(
+                "PyTorch is not installed. GradCAM localization requires torch & torchvision. "
+                "Run ONNX-only mode or install: pip3 install torch torchvision"
+            )
         # Determine device
         if device == "auto":
             if torch.cuda.is_available():
@@ -198,6 +215,29 @@ class InferenceEngine:
 
         print(f"[InferenceEngine] PyTorch model loaded for Grad-CAM (device: {self.device})")
 
+    def _preprocess_numpy(self, rgb: np.ndarray) -> np.ndarray:
+        """
+        Pure PIL+numpy preprocessing (no torchvision dependency).
+        Matches training validation pipeline: Resize(256) → CenterCrop → ToTensor → Normalize.
+        Returns float32 array of shape (1, 3, H, W).
+        """
+        from PIL import Image as _PILImage
+        pil = _PILImage.fromarray(rgb)
+        # Resize shortest side to 256
+        w, h = pil.size
+        scale = 256 / min(w, h)
+        pil = pil.resize((int(w * scale), int(h * scale)), _PILImage.BILINEAR)
+        # Center crop to input_size
+        w, h = pil.size
+        left = (w - self.input_size) // 2
+        top  = (h - self.input_size) // 2
+        pil  = pil.crop((left, top, left + self.input_size, top + self.input_size))
+        # To float32 CHW, scale to [0,1], normalize
+        arr = np.array(pil, dtype=np.float32) / 255.0
+        arr = (arr - self._imagenet_mean) / self._imagenet_std
+        arr = arr.transpose(2, 0, 1)[np.newaxis]   # (1, 3, H, W)
+        return arr
+
     def preprocess(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess image for ONNX Runtime inference.
@@ -209,10 +249,13 @@ class InferenceEngine:
             Preprocessed numpy array (1, 3, 224, 224).
         """
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        tensor = self.transform(rgb)
-        return tensor.unsqueeze(0).numpy()
+        if self.transform is not None:
+            # torchvision path
+            tensor = self.transform(rgb)
+            return tensor.unsqueeze(0).numpy()
+        return self._preprocess_numpy(rgb)
 
-    def preprocess_torch(self, image: np.ndarray) -> torch.Tensor:
+    def preprocess_torch(self, image: np.ndarray) -> "Any":  # returns torch.Tensor when available
         """
         Preprocess image for PyTorch Grad-CAM.
 
@@ -287,8 +330,6 @@ class InferenceEngine:
             tensor,
             target_class=target_class,
             heatmap_threshold=self.heatmap_threshold,
-            frame_height=self.frame_height,
-            zone_boundaries=self.zone_boundaries,
             vra_alpha=self.vra_alpha,
             vra_beta=self.vra_beta,
             vra_min_ms=self.vra_min_ms,
@@ -298,12 +339,14 @@ class InferenceEngine:
 
         result["localization_latency_ms"] = latency_ms
 
-        # Map zone name to GPIO pin
-        if result["primary_zone"]:
-            for zone in self.zones:
-                if zone["name"] == result["primary_zone"]:
-                    result["gpio_pin"] = zone["gpio_pin"]
-                    break
+        # Convert y_center_px to physical target height in mm
+        y_px = result.get("y_center_px")
+        if y_px is not None:
+            result["y_target_mm"] = round(
+                (y_px / self.input_size) * self.camera_fov_height_mm, 1
+            )
+        else:
+            result["y_target_mm"] = None
 
         return result
 
@@ -328,10 +371,9 @@ class InferenceEngine:
             "should_spray": False,
             "heatmap": None,
             "bbox": None,
-            "primary_zone": None,
-            "all_zones": [],
+            "y_center_px": None,
+            "y_target_mm": None,
             "spray_duration_ms": 0,
-            "gpio_pin": None,
             "bbox_area": 0,
             "localization_latency_ms": 0,
         }
@@ -349,10 +391,9 @@ class InferenceEngine:
                 result.update({
                     "heatmap": loc_result["heatmap"],
                     "bbox": loc_result["bbox"],
-                    "primary_zone": loc_result["primary_zone"],
-                    "all_zones": loc_result["all_zones"],
+                    "y_center_px": loc_result.get("y_center_px"),
+                    "y_target_mm": loc_result.get("y_target_mm"),
                     "spray_duration_ms": loc_result["spray_duration_ms"],
-                    "gpio_pin": loc_result.get("gpio_pin"),
                     "bbox_area": loc_result["bbox_area"],
                     "localization_latency_ms": loc_result["localization_latency_ms"],
                 })
@@ -410,11 +451,11 @@ class InferenceEngine:
         annotated = draw_bbox_and_zone(
             display,
             result.get("bbox"),
-            result.get("primary_zone"),
+            None,  # zone label removed; target shown as mm annotation
             result.get("spray_duration_ms", 0),
             result.get("class_name", "unknown"),
             result.get("confidence", 0),
-            self.zone_boundaries,
+            [0.5],  # single mid-line placeholder
         )
 
         # Add latency info
@@ -447,8 +488,8 @@ def print_result(result: Dict[str, Any], class_names: List[str]):
     if result["should_spray"]:
         print(f"  BBox:         {result.get('bbox')}")
         print(f"  BBox Area:    {result.get('bbox_area', 0)} px²")
-        print(f"  Zone:         {result.get('primary_zone')} (zones: {result.get('all_zones', [])})")
-        print(f"  GPIO Pin:     {result.get('gpio_pin')}")
+        print(f"  Y center:     {result.get('y_center_px')} px")
+        print(f"  Y target:     {result.get('y_target_mm')} mm")
         print(f"  Spray Duration: {result.get('spray_duration_ms', 0)} ms")
 
     print(f"  Latency:")

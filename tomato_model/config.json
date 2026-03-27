@@ -2,13 +2,14 @@
     "model": {
         "architecture": "resnet18",
         "num_classes": 3,
+        "classes": ["early_blight", "healthy", "late_blight"],
         "class_names": ["early_blight", "healthy", "late_blight"],
-        "input_size": [224, 224],
+        "input_size": 224,
         "pretrained": true,
-        "checkpoint_dir": "checkpoints",
+        "checkpoint_path": "checkpoints/best_epoch_25_acc_0.9236.pth",
+        "onnx_path": "checkpoints/resnet18_tomato_int8.onnx",
         "onnx_fp32_path": "checkpoints/resnet18_tomato_fp32.onnx",
-        "onnx_int8_path": "checkpoints/resnet18_tomato_int8.onnx",
-        "onnx_fp16_path": "checkpoints/resnet18_tomato_fp16.onnx"
+        "onnx_int8_path": "checkpoints/resnet18_tomato_int8.onnx"
     },
     "training": {
         "epochs": 30,
@@ -43,7 +44,9 @@
     "inference": {
         "confidence_threshold": 0.70,
         "use_onnx": true,
-        "gradcam_layer": "layer4"
+        "gradcam_layer": "layer3",
+        "heatmap_threshold": 0.4,
+        "run_gradcam": true
     },
     "camera": {
         "device_id": 0,
@@ -51,16 +54,23 @@
         "fps": 30,
         "auto_exposure": true
     },
-    "zone_mapping": {
-        "num_zones": 3,
-        "boundaries_y_fraction": [0.333, 0.667],
-        "zone_names": ["TOP", "MID", "BOTTOM"],
-        "relay_gpio_pins": [17, 27, 22],
-        "pump_gpio_pin": 23
+    "stepper": {
+        "steps_per_mm": 80,
+        "travel_mm": 800,
+        "home_offset_mm": 20,
+        "max_speed_steps_per_sec": 4000,
+        "acceleration": 2000,
+        "nozzle_gpio_pin": 17,
+        "pump_gpio_pin": 23,
+        "camera_fov_height_mm": 300,
+        "homing_timeout_s": 15,
+        "goto_timeout_s": 10
     },
     "vra": {
         "alpha": 0.025,
         "beta": 30.0,
+        "min_spray_ms": 50,
+        "max_spray_ms": 500,
         "min_duration_ms": 50,
         "max_duration_ms": 500,
         "cooldown_ms": 200

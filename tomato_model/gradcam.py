@@ -264,22 +264,18 @@ class GradCAM:
         input_tensor: torch.Tensor,
         target_class: Optional[int] = None,
         heatmap_threshold: float = 0.5,
-        frame_height: int = 480,
-        zone_boundaries: List[float] = [0.333, 0.667],
         vra_alpha: float = 0.025,
         vra_beta: float = 30.0,
         vra_min_ms: int = 50,
         vra_max_ms: int = 500,
     ) -> Dict:
         """
-        Full pipeline: image → heatmap → bbox → zone → spray duration.
+        Full pipeline: image → heatmap → bbox → y_center_px → spray duration.
 
         Args:
             input_tensor: Preprocessed image, shape (1, 3, 224, 224).
             target_class: Override predicted class (optional).
             heatmap_threshold: Threshold for bbox extraction.
-            frame_height: Original camera frame height (for zone mapping).
-            zone_boundaries: Zone Y-fraction boundaries.
             vra_alpha, vra_beta, vra_min_ms, vra_max_ms: VRA parameters.
 
         Returns:
@@ -288,8 +284,7 @@ class GradCAM:
                 - confidence: Prediction confidence
                 - heatmap: Numpy heatmap (H, W)
                 - bbox: (x, y, w, h) or None
-                - primary_zone: "TOP"/"MID"/"BOTTOM" or None
-                - all_zones: List of zones hit, or []
+                - y_center_px: Y-center of bbox in 224px model space, or None
                 - spray_duration_ms: int or 0
                 - bbox_area: int or 0
         """
@@ -302,22 +297,17 @@ class GradCAM:
             "confidence": confidence,
             "heatmap": heatmap,
             "bbox": None,
-            "primary_zone": None,
-            "all_zones": [],
+            "y_center_px": None,
             "spray_duration_ms": 0,
             "bbox_area": 0,
         }
 
         bbox = self.extract_bbox(heatmap, threshold=heatmap_threshold)
         if bbox is not None:
+            x, y, w, h = bbox
             result["bbox"] = bbox
-            result["bbox_area"] = bbox[2] * bbox[3]
-
-            primary_zone, all_zones = self.compute_zone(
-                bbox, frame_height, zone_boundaries
-            )
-            result["primary_zone"] = primary_zone
-            result["all_zones"] = all_zones
+            result["bbox_area"] = w * h
+            result["y_center_px"] = int(y + h / 2)
 
             duration = self.compute_spray_duration(
                 bbox, vra_alpha, vra_beta, vra_min_ms, vra_max_ms
@@ -516,8 +506,7 @@ def main():
     print(f"  Confidence:       {result['confidence']:.4f}")
     print(f"  Bounding Box:     {result['bbox']}")
     print(f"  BBox Area:        {result['bbox_area']} px²")
-    print(f"  Primary Zone:     {result['primary_zone']}")
-    print(f"  All Zones:        {result['all_zones']}")
+    print(f"  Y center px:      {result['y_center_px']}")
     print(f"  Spray Duration:   {result['spray_duration_ms']} ms")
     print(f"{'='*50}")
 
@@ -526,7 +515,7 @@ def main():
     annotated = draw_bbox_and_zone(
         heatmap_overlay,
         result["bbox"],
-        result["primary_zone"],
+        None,
         result["spray_duration_ms"],
         class_name,
         result["confidence"],

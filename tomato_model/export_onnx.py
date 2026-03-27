@@ -81,6 +81,8 @@ def export_to_onnx(
     print(f"\n[1/4] Exporting to ONNX (opset {opset_version})...")
     start = time.time()
 
+    # Use legacy exporter explicitly — the new dynamo-based exporter (PyTorch ≥2.2)
+    # does not embed weights by default and changes opset behaviour.
     torch.onnx.export(
         model,
         dummy_input,
@@ -91,6 +93,7 @@ def export_to_onnx(
         input_names=["input"],
         output_names=["output"],
         dynamic_axes=dynamic_axes,
+        dynamo=False,           # force legacy TorchScript-based exporter
     )
 
     elapsed = time.time() - start

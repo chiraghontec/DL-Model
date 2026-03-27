@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-02-24T14:56:01.196706",
+  "model_int8": "resnet18_tomato_int8.onnx",
+  "ort_version": "1.24.2",
+  "cpu_temp_start": 37.485,
+  "cpu_freq_mhz": 1500.0,
+  "int8_latency": {
+    "n_runs": 500,
+    "mean_ms": 153.94186643000285,
+    "median_ms": 153.33883850007624,
+    "std_ms": 1.5371559643003438,
+    "min_ms": 152.57155900008001,
+    "max_ms": 161.21825999994144,
+    "p50_ms": 153.33883850007624,
+    "p95_ms": 157.45118184987632,
+    "p99_ms": 158.94228478013247,
+    "fps": 6.495642054524997,
+    "total_s": 76.9746848430002
+  },
+  "int8_accuracy": {
+    "n_images": 300,
+    "correct": 285,
+    "accuracy_pct": 95.0,
+    "mean_ms": 150.37144682000567,
+    "p95_ms": 154.07270299995162,
+    "per_class": {
+      "early_blight": {
+        "correct": 92,
+        "total": 100,
+        "accuracy": 92.0,
+        "precision": 93.87755102040816,
+        "recall": 92.0,
+        "f1": 92.92929292929293
+      },
+      "healthy": {
+        "correct": 100,
+        "total": 100,
+        "accuracy": 100.0,
+        "precision": 99.00990099009901,
+        "recall": 100.0,
+        "f1": 99.50248756218906
+      },
+      "late_blight": {
+        "correct": 93,
+        "total": 100,
+        "accuracy": 93.0,
+        "precision": 92.07920792079209,
+        "recall": 93.0,
+        "f1": 92.53731343283582
+      }
+    }
+  },
+  "fp32_latency": {
+    "n_runs": 500,
+    "mean_ms": 173.5478098540079,
+    "median_ms": 172.87709649997396,
+    "std_ms": 1.8801345907544322,
+    "min_ms": 171.3429769999948,
+    "max_ms": 183.13128700015113,
+    "p50_ms": 172.87709649997396,
+    "p95_ms": 177.3914284001421,
+    "p99_ms": 179.86610545000076,
+    "fps": 5.761866208002968,
+    "total_s": 86.7774401470001
+  },
+  "fp32_accuracy": {
+    "n_images": 300,
+    "correct": 285,
+    "accuracy_pct": 95.0,
+    "mean_ms": 170.87690953666805,
+    "p95_ms": 175.10369659992193,
+    "per_class": {
+      "early_blight": {
+        "correct": 92,
+        "total": 100,
+        "accuracy": 92.0,
+        "precision": 93.87755102040816,
+        "recall": 92.0,
+        "f1": 92.92929292929293
+      },
+      "healthy": {
+        "correct": 100,
+        "total": 100,
+        "accuracy": 100.0,
+        "precision": 99.00990099009901,
+        "recall": 100.0,
+        "f1": 99.50248756218906
+      },
+      "late_blight": {
+        "correct": 93,
+        "total": 100,
+        "accuracy": 93.0,
+        "precision": 92.07920792079209,
+        "recall": 93.0,
+        "f1": 92.53731343283582
+      }
+    }
+  },
+  "speedup_x": 1.1273593979251892,
+  "readiness": {
+    "checks": {
+      "Model size \u2264 15 MB": true,
+      "Mean latency \u2264 400 ms": true,
+      "Throughput \u2265 2 FPS": true,
+      "P95 latency \u2264 500 ms": true,
+      "Accuracy \u2265 90%": true
+    },
+    "model_mb": 11.230776,
+    "passed": 5,
+    "total": 5
+  },
+  "cpu_temp_end": 52.582
+}

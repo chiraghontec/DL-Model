@@ -1,0 +1,1 @@
+timestamp,elapsed_s,frame_no,class_name,confidence,should_spray,primary_zone,spray_duration_ms,bbox_x,bbox_y,bbox_w,bbox_h,inference_ms
