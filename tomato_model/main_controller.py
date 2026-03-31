@@ -109,8 +109,8 @@ class Controller:
         # Components
         self.cam = self._make_camera()
         self.engine = self._make_engine(config_path)
-        self.relay = self._make_relay()
-        self.stepper = self._make_stepper(config_path)
+        self.relay = None if args.dry_run else self._make_relay()
+        self.stepper = None if args.dry_run else self._make_stepper(config_path)
         self.kinematics = KinematicMapper(config_path)
         self.logger = DataLogger(args.log)
 
@@ -250,10 +250,13 @@ class Controller:
         use_camera = not self.args.no_camera
 
         # Setup relay and home actuator
-        self.relay.setup()
-        log.info("[Stepper] Homing actuator …")
-        self.stepper.home()
-        log.info("[Stepper] Home complete")
+        if self.args.dry_run:
+            log.info("[DryRun] Actuators disabled: no stepper motion, no relay spray")
+        else:
+            self.relay.setup()
+            log.info("[Stepper] Homing actuator …")
+            self.stepper.home()
+            log.info("[Stepper] Home complete")
 
         # Open display window (unless headless)
         if not self.args.no_display:
@@ -288,8 +291,9 @@ class Controller:
                         if y_px is not None:
                             steps = self.kinematics.pixel_to_steps(y_px)
                         result["steps_commanded"] = steps
-                        self.stepper.goto(steps)
-                        self.relay.spray(result.get("spray_duration_ms", 200))
+                        if not self.args.dry_run:
+                            self.stepper.goto(steps)
+                            self.relay.spray(result.get("spray_duration_ms", 200))
 
                     self._log_row(result)
 
@@ -338,7 +342,7 @@ class Controller:
                     t_frame = time.time()
                     
                     # Periodically refresh distance to adjust FOV mapping linearly (assume 1cm = 20mm FOV scale)
-                    if self.frame_no % 30 == 0:
+                    if (not self.args.dry_run) and self.frame_no % 30 == 0:
                         dist_data = self.stepper.get_distance()
                         front_dist = dist_data.get("front_cm", 15)
                         if front_dist < 100:  # Valid reading
@@ -353,8 +357,9 @@ class Controller:
                         if y_px is not None:
                             steps = self.kinematics.pixel_to_steps(y_px)
                         result["steps_commanded"] = steps
-                        self.stepper.goto(steps)
-                        self.relay.spray(result.get("spray_duration_ms", 200))
+                        if not self.args.dry_run:
+                            self.stepper.goto(steps)
+                            self.relay.spray(result.get("spray_duration_ms", 200))
 
                     self._log_row(result)
 
@@ -397,10 +402,12 @@ class Controller:
         if not self.args.no_camera:
             self.cam.stop()
 
-        self.stepper.stop()
-        self.stepper.disconnect()
-        self.relay.all_off()
-        self.relay.teardown()
+        if self.stepper is not None:
+            self.stepper.stop()
+            self.stepper.disconnect()
+        if self.relay is not None:
+            self.relay.all_off()
+            self.relay.teardown()
         self.logger.close()
 
         if not self.args.no_display:
@@ -413,7 +420,8 @@ class Controller:
             print(f"  Session summary")
             print(f"  Frames processed : {self.frame_no}")
             print(f"  Avg frame time   : {avg_ms:.1f} ms  ({1000/avg_ms:.1f} FPS)")
-            print(f"  Relay stats      : {self.relay.stats()}")
+            relay_stats = self.relay.stats() if self.relay is not None else {"dry_run": True}
+            print(f"  Relay stats      : {relay_stats}")
             print(f"  Log saved to     : {self.args.log}")
             print(f"{'='*50}\n")
 
@@ -495,6 +503,11 @@ def parse_args():
         default=6.0,
         help="Target inference rate in FPS (default: 6.0)",
     )
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run full perception pipeline but disable stepper/relay actuation",
+    )
     return ap.parse_args()
 
 
@@ -507,6 +520,7 @@ if __name__ == "__main__":
     print(f"  Mode      : {'TEST IMAGE' if args.no_camera else 'LIVE CAMERA'}")
     print(f"  GradCAM   : {'OFF' if args.no_gradcam else 'ON'}")
     print(f"  Display   : {'OFF' if args.no_display else 'ON'}")
+    print(f"  Dry-Run   : {'ON' if args.dry_run else 'OFF'}")
     print(f"  Target FPS: {args.fps}")
     print()
 

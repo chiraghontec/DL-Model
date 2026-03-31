@@ -448,15 +448,32 @@ class InferenceEngine:
         if result.get("heatmap") is not None:
             display = overlay_heatmap(display, result["heatmap"], alpha=0.4)
 
-        annotated = draw_bbox_and_zone(
-            display,
-            result.get("bbox"),
-            None,  # zone label removed; target shown as mm annotation
-            result.get("spray_duration_ms", 0),
-            result.get("class_name", "unknown"),
-            result.get("confidence", 0),
-            [0.5],  # single mid-line placeholder
-        )
+        if draw_bbox_and_zone is None:
+            annotated = display.copy()
+            class_name = result.get("class_name", "unknown")
+            confidence = float(result.get("confidence", 0))
+            spray_ms = int(result.get("spray_duration_ms", 0))
+            should_spray = bool(result.get("should_spray", False))
+            status = f"{class_name} {confidence:.0%}"
+            action = f"SPRAY {spray_ms}ms" if should_spray else "NO SPRAY"
+            cv2.putText(
+                annotated, status, (6, 18),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA,
+            )
+            cv2.putText(
+                annotated, action, (6, 36),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA,
+            )
+        else:
+            annotated = draw_bbox_and_zone(
+                display,
+                result.get("bbox"),
+                None,  # zone label removed; target shown as mm annotation
+                result.get("spray_duration_ms", 0),
+                result.get("class_name", "unknown"),
+                result.get("confidence", 0),
+                [0.5],  # single mid-line placeholder
+            )
 
         # Add latency info
         latency_text = f"Cls: {result.get('latency_ms', 0):.0f}ms"

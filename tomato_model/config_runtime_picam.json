@@ -1,0 +1,61 @@
+{
+  "model": {
+    "architecture": "resnet18",
+    "num_classes": 3,
+    "classes": ["early_blight", "healthy", "late_blight"],
+    "class_names": ["early_blight", "healthy", "late_blight"],
+    "input_size": 224,
+    "pretrained": true,
+    "checkpoint_path": "",
+    "onnx_path": "../pi_deploy/resnet18_tomato_int8.onnx",
+    "onnx_fp32_path": "../pi_deploy/resnet18_tomato_fp32.onnx",
+    "onnx_int8_path": "../pi_deploy/resnet18_tomato_int8.onnx"
+  },
+  "inference": {
+    "confidence_threshold": 0.7,
+    "use_onnx": true,
+    "gradcam_layer": "layer3",
+    "heatmap_threshold": 0.4,
+    "run_gradcam": false
+  },
+  "camera": {
+    "device_id": 0,
+    "resolution": [640, 480],
+    "fps": 30,
+    "auto_exposure": true
+  },
+  "stepper": {
+    "steps_per_mm": 80,
+    "travel_mm": 800,
+    "home_offset_mm": 20,
+    "max_speed_steps_per_sec": 4000,
+    "acceleration": 2000,
+    "nozzle_gpio_pin": 17,
+    "pump_gpio_pin": 23,
+    "camera_fov_height_mm": 300,
+    "homing_timeout_s": 15,
+    "goto_timeout_s": 10
+  },
+  "vra": {
+    "alpha": 0.025,
+    "beta": 30.0,
+    "min_spray_ms": 50,
+    "max_spray_ms": 500,
+    "min_duration_ms": 50,
+    "max_duration_ms": 500,
+    "cooldown_ms": 200
+  },
+  "navigation": {
+    "serial_port": "/dev/ttyUSB0",
+    "baud_rate": 115200,
+    "default_speed_pwm": 150,
+    "obstacle_threshold_cm": 15,
+    "heartbeat_interval_ms": 500
+  },
+  "logging": {
+    "csv_path": "logs/spray_log.csv",
+    "save_frames": true,
+    "frame_save_interval": 10,
+    "max_log_size_mb": 50
+  }
+}
